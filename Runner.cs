@@ -1,20 +1,25 @@
+using System.Security.Cryptography.Xml;
+
 namespace RunnerGame
 {
     public partial class Runner : Form
     {
         Image player;
-        
         List<string> playerMovements = new List<string>();
-        
+
         int steps = 1;
         int slowDownFrameRate = 0;
-        bool goLeft, goRight, goUp, goDown;
+        bool goRight, goUp;
         int playerX = 1;
         int playerY = 253;
         int playerHeight = 100;
         int playerWidth = 100;
         int playerSpeed = 10;
         bool jumping = false;
+        int jumpSpeed = 0;
+        int gravity = 2;
+        int maxJumpHeight = -20;
+        int cnt;
 
         Image obstacle;
         List<string> obstacles = new List<string>();
@@ -22,7 +27,11 @@ namespace RunnerGame
         int obstacleY = 313;
         int obstacleHeight = 40;
         int obstacleWidth = 40;
+
         private System.Windows.Forms.Timer gameTimer;
+        Label gameOver;
+        Label score;
+        int playerScore = 0;
 
         public Runner()
         {
@@ -40,6 +49,7 @@ namespace RunnerGame
             obstacles = Directory.GetFiles("Assets/obstacles", "*.png").ToList();
             player = Image.FromFile(playerMovements[0]);
             GenerateObstacle();
+            
 
             // Attach key event handlers
             this.KeyDown += new KeyEventHandler(KeyIsDown);
@@ -54,8 +64,22 @@ namespace RunnerGame
             gameTimer.Interval = 20; // 20 ms -> 50 FPS
             gameTimer.Tick += new EventHandler(TimerEvent);
             gameTimer.Start();
-        }
 
+            // Game over label initialization
+            gameOver = new Label();
+            gameOver.Text = "";
+            gameOver.Font = new Font("Arial", 24);
+            gameOver.Location = new Point(300, 200);
+            gameOver.AutoSize = true;
+            this.Controls.Add(gameOver);
+
+            score = new Label();
+            score.Text = "Score: ";
+            score.Location = new Point(0, 380);
+            score.AutoSize = true;
+            this.Controls.Add(score);
+            score.Font = new Font("Arial", 24);
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -80,7 +104,6 @@ namespace RunnerGame
             if (e.KeyCode == Keys.Up)
             {
                 goUp = false;
-                jumping = true;
             }
         }
 
@@ -93,6 +116,7 @@ namespace RunnerGame
             if (e.KeyCode == Keys.Up && !jumping)
             {
                 goUp = true;
+                jumpSpeed = maxJumpHeight;
                 jumping = true;
             }
         }
@@ -113,8 +137,8 @@ namespace RunnerGame
         }
 
         private void GenerateObstacle()
-        {
-            obstacle = Image.FromFile(obstacles[0]);
+        {  
+            obstacle = Image.FromFile(obstacles[0]);    
         }
 
         private void TimerEvent(object sender, EventArgs e)
@@ -122,22 +146,63 @@ namespace RunnerGame
             if (goRight)
             {
                 AnimatePlayer(1, 6);
-                obstacleX-=3;
+                obstacleX -= 6;
+                if(obstacleX + obstacleWidth < 0)
+                {
+                    playerScore++;
+                    score.Text = "Score: " + playerScore.ToString();
+                    GenerateObstacle();
+                    obstacleX = this.Width + obstacleWidth;
+                }
             }
-            if (!goRight)
+            else
             {
                 AnimatePlayer(0, 0);
             }
-            if (goUp)
+
+            // Handle jumping and gravity
+            if (jumping)
             {
-                playerY -= 10;
+                playerY += jumpSpeed;
+                jumpSpeed += gravity;
+
+                if (playerY >= 253)
+                {
+                    playerY = 253;
+                    jumpSpeed = 0;
+                    jumping = false;
+                }
             }
-            if(!goUp && playerY < 253) {
-                playerY += 8;
+
+            if (CheckCollision())
+            {
+                gameOver.Text = "Game Over";
+                gameTimer.Stop();  // Stop the game timer to halt game
             }
-            if(playerY >= 253)
-                jumping = false;
-            this.Invalidate();
+            
+            this.Invalidate(); // Repaint the game
+        }
+
+        private bool CheckCollision()
+        {
+        
+            int playerRadius = playerWidth / 2;
+            int obstacleRadius = obstacleWidth / 2;
+
+            int playerCenterX = playerX + playerRadius;
+            int playerCenterY = playerY + playerRadius;
+
+            int obstacleCenterX = obstacleX + obstacleRadius;
+            int obstacleCenterY = obstacleY + obstacleRadius;
+
+            double distance = Math.Sqrt(Math.Pow(playerCenterX - obstacleCenterX, 2) + Math.Pow(playerCenterY - obstacleCenterY, 2));
+
+            if ((distance + 20) <= (playerRadius + obstacleRadius))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }
