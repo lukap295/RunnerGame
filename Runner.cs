@@ -150,6 +150,11 @@ namespace RunnerGame
                 if(obstacleX + obstacleWidth < 0)
                 {
                     playerScore++;
+                    if(playerScore%5 == 0)
+                    {
+                        obstacleHeight += 20;
+                        obstacleY -= 20;
+                    }
                     score.Text = "Score: " + playerScore.ToString();
                     GenerateObstacle();
                     obstacleX = this.Width + obstacleWidth;
